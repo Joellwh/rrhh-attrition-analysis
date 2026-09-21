@@ -1,0 +1,78 @@
+# OS generated files
+Thumbs.db
+.DS_Store
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Jupyter Notebook
+# Se ignoran los checkpoints automáticos, pero NO los notebooks:
+# notebooks/01_eda.ipynb es un entregable del proyecto y debe versionarse.
+.ipynb_checkpoints
+
+# IDE y herramientas locales
+.vscode/
+.idea/
+.claude/
+*.sublime-project
+*.sublime-workspace
+
+# Data
+# El CSV crudo de IBM (228 KB) SI se versiona. La regla de "no commitear datos"
+# existe para datos grandes, privados o cambiantes: este no es ninguno de los tres.
+# Versionarlo hace el repo autocontenido y elimina la dependencia de un repo
+# de terceros para poder reproducir el analisis. Procedencia en data/README.md.
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/WA_Fn-UseC_-HR-Employee-Attrition.csv
+# data/processed/ es derivado: lo regenera src/data_preparation.py.
+data/processed/*
+!data/processed/.gitkeep
+
+# Power BI
+# El .pbix del dashboard es un entregable y se versiona.
+# Solo se ignoran los archivos temporales que genera Power BI Desktop.
+*.pbix.tmp
+.pbi/
+
+# Reports
+# Los PNG generados por src/run_eda.py son entregables (el README los referencia).
+# Solo se ignoran exportaciones pesadas y regenerables.
+reports/*.pdf
+reports/*.html
+
+# Sitio que publica GitHub Pages: lo regenera src/build_dashboard.py en cada
+# corrida del CI. El entregable versionado es dashboards/rrhh_dashboard.html.
+_site/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local

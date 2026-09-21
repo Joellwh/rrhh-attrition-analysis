@@ -1,0 +1,30 @@
+# Versiones fijadas a las verificadas con este proyecto.
+#
+# Por que fijadas y no ">=": el analisis se desarrollo contra pandas 3.x, cuya
+# API cambio respecto de la 2.x (inferencia de dtypes, select_dtypes con 'str').
+# Con ">=2.0.0" alguien que instale esto el año que viene recibe una version
+# distinta y los scripts pueden romperse en silencio. Los tests de tests/ estan
+# verificados contra exactamente estas versiones.
+#
+# Probado con Python 3.12.2
+#
+# Para actualizar: subi una version, corre `pytest`, y solo entonces fijala aca.
+
+# Core
+pandas==3.0.5
+numpy==2.5.1
+
+# Visualizacion
+matplotlib==3.11.1
+seaborn==0.13.2
+
+# SQL (sqlite3 viene con Python; sqlalchemy queda para conexiones externas)
+sqlalchemy==2.0.51
+
+# Notebooks
+notebook==7.6.1
+ipykernel==7.3.0
+jupyterlab==4.6.2
+
+# Tests
+pytest==9.1.1

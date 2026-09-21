@@ -1,0 +1,866 @@
+<title>Radar de Rotación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600&family=Inter:wght@400;500;600&display=swap');
+
+/* ============================================================
+   TOKENS
+
+   Color — un rol por color:
+     clay  = se fueron / riesgo      (nunca otra cosa)
+     teal  = interacción             (nunca semántico)
+     slate = base neutra
+   Los grises son slate (neutro frío), no grises puros.
+   Los bordes viajan como rgba de baja opacidad: se apoyan sobre
+   el fondo en vez de dibujar una línea propia.
+
+   Tipografía — dos familias:
+     display = Plus Jakarta Sans  (títulos y cifras)
+     body    = Inter              (lectura, datos, tablas)
+   ============================================================ */
+:root{
+  --font-display:"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body:"Inter", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  --font-code:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --bg:#EFF2F6; --surface:#FFFFFF; --surface-2:#F4F6F9; --well:#DFE5EC;
+  --ink:#0F172A; --ink-soft:#475569; --ink-faint:#5F6C7E;
+
+  --border-color:rgba(15,23,42,.07);
+  --border-color-soft:rgba(15,23,42,.045);
+  --border-color-strong:rgba(15,23,42,.14);
+
+  --risk:#B8462F; --risk-ink:#9A3A26; --risk-soft:#F7E4DE;
+  --warn:#A8761B; --warn-ink:#8A6115; --warn-soft:#F6ECD9;
+  --calm:#8494A5; --dot-stay:#C6D0DC;
+  --teal:#0B7268; --teal-ink:#08564E; --teal-soft:#DCEBE8; --on-teal:#FFFFFF;
+
+  --shadow:0 1px 2px rgba(15,23,42,.04), 0 2px 8px rgba(15,23,42,.04);
+  --sh-lift:0 4px 10px rgba(15,23,42,.08), 0 16px 40px rgba(15,23,42,.10);
+
+  /* alias: se resuelven en el punto de uso, así el tema oscuro
+     sólo necesita redefinir --border-color */
+  --line:var(--border-color);
+  --line-soft:var(--border-color-soft);
+  --line-strong:var(--border-color-strong);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#090C11; --surface:#161B22; --surface-2:#1B2129; --well:#2C333C;
+    --ink:#E6EDF3; --ink-soft:#9DA7B3; --ink-faint:#8792A0;
+    --border-color:rgba(255,255,255,.08);
+    --border-color-soft:rgba(255,255,255,.05);
+    --border-color-strong:rgba(255,255,255,.15);
+    --risk:#E08462; --risk-ink:#EDA184; --risk-soft:#3A211A;
+    --warn:#D9A64F; --warn-ink:#E6BE7C; --warn-soft:#332813;
+    --calm:#8593A3; --dot-stay:#333B45;
+    --teal:#35C9AF; --teal-ink:#66DCC5; --teal-soft:#0E332E; --on-teal:#06211D;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.26);
+    --sh-lift:0 4px 10px rgba(0,0,0,.4), 0 16px 40px rgba(0,0,0,.36);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#090C11; --surface:#161B22; --surface-2:#1B2129; --well:#2C333C;
+  --ink:#E6EDF3; --ink-soft:#9DA7B3; --ink-faint:#8792A0;
+  --border-color:rgba(255,255,255,.08);
+  --border-color-soft:rgba(255,255,255,.05);
+  --border-color-strong:rgba(255,255,255,.15);
+  --risk:#E08462; --risk-ink:#EDA184; --risk-soft:#3A211A;
+  --warn:#D9A64F; --warn-ink:#E6BE7C; --warn-soft:#332813;
+  --calm:#8593A3; --dot-stay:#333B45;
+  --teal:#35C9AF; --teal-ink:#66DCC5; --teal-soft:#0E332E; --on-teal:#06211D;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.26);
+  --sh-lift:0 4px 10px rgba(0,0,0,.4), 0 16px 40px rgba(0,0,0,.36);
+  color-scheme:dark;
+}
+
+/* ============ BASE ============
+   Escala: 11 / 12 / 13 / 14 / 15 / 1.25rem / 3rem
+   Pesos: 400 lectura · 500 énfasis · 600 títulos y cifras. Nada de 700+. */
+*{box-sizing:border-box;}
+html,body{margin:0; padding:0;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+h1,h2,h3,h4{margin:0; font-family:var(--font-display); font-weight:600; letter-spacing:-.02em; text-wrap:balance;}
+b,strong{font-weight:600;}
+button{font:inherit; color:inherit; cursor:pointer;}
+:focus-visible{outline:2px solid var(--teal); outline-offset:2px; border-radius:4px;}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important;}}
+.figure{font-family:var(--font-display); font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+.mono{font-variant-numeric:tabular-nums;}
+.micro{font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint);}
+
+/* ============ COMMAND BAR ============
+   min-height + wrap: la fila crece cuando los filtros se parten en dos
+   líneas. Con height fijo los controles se desbordaban hacia arriba. */
+.cmdbar{position:sticky; top:0; z-index:60; background:var(--surface); border-bottom:1px solid var(--line);}
+.cmd-row{
+  max-width:1360px; margin:0 auto; padding:9px 24px;
+  display:flex; align-items:center; gap:9px 18px;
+  min-height:58px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:10px; flex:none;}
+.brand .pulse{width:9px; height:9px; border-radius:50%; background:var(--risk); box-shadow:0 0 0 3px var(--risk-soft); flex:none;}
+.brand h1{font-size:19px; white-space:nowrap;}
+/* el separador dejaba a "Limpiar" huérfano a la izquierda al partirse la fila;
+   margin-left:auto lo manda a la derecha entre en una línea o en dos */
+.spacer{display:none;}
+.btn-ghost.clear{margin-left:auto;}
+
+.fset{display:flex; align-items:center; gap:9px; flex-wrap:wrap;}
+.fsel{position:relative; display:inline-flex; align-items:center;}
+.fsel select{
+  appearance:none; font-family:inherit; font-size:13px; line-height:1.4; color:var(--ink-soft);
+  background-color:var(--surface-2); border:1px solid var(--line-strong); border-radius:8px;
+  padding:8px 32px 8px 12px; cursor:pointer; max-width:190px;
+  text-overflow:ellipsis; white-space:nowrap;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-faint) 50%),linear-gradient(135deg,var(--ink-faint) 50%,transparent 50%);
+  background-position:calc(100% - 16px) center, calc(100% - 11px) center;
+  background-size:5px 5px,5px 5px; background-repeat:no-repeat;
+  transition:border-color .15s, background-color .15s;
+}
+.fsel select:hover{border-color:var(--ink-faint);}
+/* filtro activo = teal, porque teal significa "esto lo tocaste" */
+.fsel select.active{border-color:var(--teal); color:var(--teal-ink); background-color:var(--teal-soft); font-weight:500;}
+.seg{display:inline-flex; background:var(--surface-2); border:1px solid var(--line-strong); border-radius:8px; padding:2px; gap:2px;}
+.seg button{background:none; border:none; border-radius:6px; padding:6px 12px; font-size:13px; line-height:1.4; color:var(--ink-soft);}
+/* el color sobre teal viaja como token (--on-teal) para que ninguna regla de tema
+   gane por especificidad sobre la del botón "Todos" y lo deje ilegible */
+.seg button[aria-pressed="true"]{background:var(--teal); color:var(--on-teal); font-weight:500;}
+.seg button[data-v=""][aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:var(--shadow);}
+
+.btn-ghost{background:none; border:1px solid var(--line-strong); border-radius:8px; padding:8px 13px; font-size:13px; line-height:1.4; color:var(--ink-soft); white-space:nowrap;}
+.btn-ghost:hover{border-color:var(--ink-faint); color:var(--ink);}
+.btn-ghost[aria-expanded="true"]{border-color:var(--teal); color:var(--teal-ink); background:var(--teal-soft);}
+.btn-ghost.clear:hover{border-color:var(--risk); color:var(--risk-ink);}
+.btn-ghost:disabled{opacity:.38; cursor:default;}
+.btn-ghost:disabled:hover{border-color:var(--line-strong); color:var(--ink-soft);}
+
+.cmd-extra{border-top:1px solid var(--line-soft); background:var(--surface-2);}
+.cmd-extra[hidden]{display:none;}
+.cmd-extra .cmd-row{min-height:0; padding-top:11px; padding-bottom:11px;}
+
+.tabbar{border-top:1px solid var(--line-soft);}
+.tabbar .cmd-row{min-height:44px; padding-top:0; padding-bottom:0; gap:26px; overflow-x:auto; flex-wrap:nowrap;}
+.tabbar button{
+  background:none; border:none; padding:0; height:43px; font-size:14px; color:var(--ink-soft);
+  border-bottom:2px solid transparent; white-space:nowrap; font-family:inherit;
+}
+.tabbar button:hover{color:var(--ink);}
+.tabbar button[aria-selected="true"]{color:var(--ink); font-weight:500; border-bottom-color:var(--teal);}
+
+/* ============ LAYOUT ============ */
+main{max-width:1360px; margin:0 auto; padding:20px 24px 72px;}
+
+/* ---- HERO: la plantilla como personas contables ---- */
+.hero{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow); padding:22px 24px; margin-bottom:14px;
+  display:grid; grid-template-columns:1fr 258px; gap:28px; align-items:stretch;
+}
+.matrix-side{min-width:0; display:flex; flex-direction:column;}
+.matrix-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:12px; flex-wrap:wrap;}
+.matrix-head .t{font-size:13px; color:var(--ink-soft);}
+.matrix-head .t b{color:var(--ink); font-weight:600;}
+.mkey{display:flex; gap:14px; flex-wrap:wrap;}
+.mkey span{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);}
+.mkey i{width:9px; height:9px; border-radius:2px; display:inline-block;}
+.matrix{display:grid; grid-template-columns:repeat(auto-fill,7px); gap:3px; align-content:start; animation:settle .3s ease;}
+.matrix i{width:7px; height:7px; border-radius:2px; display:block; background:var(--dot-stay);}
+.matrix i.leave{background:var(--risk);}
+@keyframes settle{from{opacity:.25;} to{opacity:1;}}
+.matrix-foot{margin-top:12px; font-size:12px; color:var(--ink-faint); line-height:1.45;}
+
+.hero-figs{border-left:1px solid var(--line-soft); padding-left:26px; display:flex; flex-direction:column; justify-content:center; min-width:0;}
+.hero-rate{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.hero-rate .v{font-family:var(--font-display); font-weight:600; font-size:3rem; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+.hero-rate.over .v{color:var(--risk-ink);}
+.hero-lab{font-size:13px; color:var(--ink-soft); margin-top:8px;}
+.delta{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px; font-variant-numeric:tabular-nums;}
+.delta.up{background:var(--risk-soft); color:var(--risk-ink);}
+.delta.down{background:var(--teal-soft); color:var(--teal-ink);}
+.substats{display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; margin-top:20px; padding-top:16px; border-top:1px solid var(--line-soft);}
+.substat .n{font-family:var(--font-display); font-weight:600; font-size:1.25rem; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+.substat .n.risk{color:var(--risk-ink);}
+.substat .l{font-size:12px; color:var(--ink-faint); margin-top:2px;}
+
+/* ---- alerta ---- */
+.alertstrip{display:flex; align-items:flex-start; gap:11px; border-radius:10px; padding:12px 16px; font-size:14px; margin-bottom:16px; border:1px solid transparent; line-height:1.45;}
+.alertstrip .icon{flex:none; width:18px; height:18px; margin-top:1px;}
+.alertstrip.tone-risk{background:var(--risk-soft); border-color:var(--risk); color:var(--ink);}
+.alertstrip.tone-warn{background:var(--warn-soft); border-color:var(--warn); color:var(--ink);}
+.alertstrip.tone-ok{background:var(--teal-soft); border-color:var(--teal); color:var(--ink);}
+.alertstrip b{font-weight:600;}
+
+/* ---- cards ---- */
+.grid{display:grid; gap:14px; grid-template-columns:repeat(12,1fr); align-items:start;}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px; box-shadow:var(--shadow); min-width:0;}
+.c4{grid-column:span 4;} .c5{grid-column:span 5;} .c6{grid-column:span 6;}
+.c7{grid-column:span 7;} .c8{grid-column:span 8;} .c12{grid-column:span 12;}
+.card h3{font-size:1.25rem;}
+.card .sub{font-size:13px; color:var(--ink-faint); margin-top:5px; line-height:1.45;}
+.card .body{margin-top:18px;}
+
+/* insight: discreto por defecto, con etiqueta solo cuando importa */
+.insight{margin-top:15px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-soft); line-height:1.5;}
+.insight b{color:var(--ink); font-weight:600;}
+.insight.flag{display:flex; gap:10px; align-items:flex-start;}
+.insight .tag{font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:3px 7px; border-radius:4px; flex:none; margin-top:1px;}
+.insight.t-risk .tag{color:var(--risk-ink); background:var(--risk-soft);}
+.insight.t-warn .tag{color:var(--warn-ink); background:var(--warn-soft);}
+
+/* ---- barras horizontales: categorías nominales ---- */
+.hbars{display:flex; flex-direction:column; gap:9px;}
+.hbar{display:grid; grid-template-columns:var(--lw,150px) 1fr auto; align-items:center; gap:12px;}
+.hbar .lab{font-size:13px; color:var(--ink-soft); text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.hbar .track{position:relative; height:22px; background:var(--well); border-radius:5px; overflow:hidden;}
+.hbar .fill{position:absolute; inset:0 auto 0 0; border-radius:5px; transition:width .45s cubic-bezier(.22,.8,.3,1);}
+.hbar .val{font-family:var(--font-display); font-weight:600; font-size:13px; font-variant-numeric:tabular-nums; min-width:48px; text-align:right;}
+.f-risk{background:var(--risk);} .f-warn{background:var(--warn);} .f-calm{background:var(--calm);}
+.t-r{color:var(--risk-ink);} .t-w{color:var(--warn-ink);} .t-c{color:var(--ink-soft);}
+
+/* ---- columnas verticales: datos ordenados ---- */
+.vbars{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:10px; align-items:end;}
+.vcol{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0;}
+.vplot{width:100%; height:var(--vh,148px); display:flex; align-items:flex-end; justify-content:center;}
+.vbar{width:100%; max-width:54px; border-radius:5px 5px 2px 2px; min-height:3px; transition:height .45s cubic-bezier(.22,.8,.3,1);}
+.vval{font-family:var(--font-display); font-weight:600; font-size:13px; font-variant-numeric:tabular-nums;}
+.vlab{font-size:12px; color:var(--ink-soft); text-align:center; line-height:1.25; overflow-wrap:anywhere;}
+.vn{font-size:11px; color:var(--ink-faint); font-variant-numeric:tabular-nums;}
+.pair{display:flex; gap:3px; align-items:flex-end; justify-content:center; width:100%; height:100%;}
+.pair .p{width:44%; max-width:24px; border-radius:4px 4px 1px 1px; min-height:3px; transition:height .45s cubic-bezier(.22,.8,.3,1);}
+
+.scale-key{display:flex; align-items:center; gap:16px; margin-top:14px; flex-wrap:wrap; font-size:11px; font-weight:500; color:var(--ink-faint); letter-spacing:.02em;}
+.scale-key span{display:inline-flex; align-items:center; gap:6px;}
+.scale-key i{width:16px; height:4px; border-radius:2px; display:inline-block;}
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:14px;}
+.legend span{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+/* ---- small multiples ---- */
+.sm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(196px,1fr)); gap:14px;}
+.sm{background:var(--surface-2); border:1px solid var(--line-soft); border-radius:10px; padding:14px 14px 12px;}
+.sm h4{font-size:15px; margin:0 0 4px;}
+.sm .smsub{font-size:12px; color:var(--ink-faint); margin-bottom:14px; line-height:1.35;}
+.sm .vlab{font-size:11px;} .sm .vval{font-size:12px;}
+
+/* ---- scatter ---- */
+.scatter{width:100%; height:auto; display:block; overflow:visible;}
+.sc-grid{stroke:var(--line); stroke-width:1; stroke-dasharray:2 4;}
+.sc-axis{stroke:var(--line-strong); stroke-width:1;}
+.sc-tick{fill:var(--ink-faint); font-family:var(--font-body); font-size:11px;}
+.sc-axtitle{fill:var(--ink-faint); font-family:var(--font-body); font-size:11px; font-weight:600; letter-spacing:.04em;}
+.sc-zone{fill:var(--risk); opacity:.055;}
+.sc-zone-line{stroke:var(--risk); stroke-width:1; stroke-dasharray:3 3; opacity:.5;}
+.sc-zone-lab{fill:var(--risk-ink); font-family:var(--font-body); font-size:11px; font-weight:600; letter-spacing:.03em;}
+.sc-stay{fill:var(--dot-stay); opacity:.85;}
+.sc-leave{fill:var(--risk); opacity:.8;}
+
+/* ---- tabla: Inter 14px / 400 / 1.5 ---- */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:10px;}
+table.dt{width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:.875rem; font-weight:400; line-height:1.5; min-width:680px;}
+table.dt th{
+  text-align:left; font-family:var(--font-body); font-size:11px; letter-spacing:.04em;
+  text-transform:uppercase; color:var(--ink-faint); font-weight:600; padding:12px 14px;
+  border-bottom:1px solid var(--line-strong); background:var(--surface-2); white-space:nowrap;
+}
+table.dt th.sortable{cursor:pointer; user-select:none;}
+table.dt th.sortable:hover{color:var(--ink);}
+table.dt th.num, table.dt td.num{text-align:right; font-variant-numeric:tabular-nums;}
+table.dt th[aria-sort]{color:var(--teal-ink);}
+table.dt th .caret{opacity:.5; margin-left:5px; font-size:11px;}
+table.dt th[aria-sort] .caret{opacity:1;}
+table.dt td{padding:12px 14px; border-bottom:1px solid var(--line-soft);}
+table.dt tr:last-child td{border-bottom:none;}
+table.dt tbody tr:hover{background:var(--surface-2);}
+table.dt .rate-cell{display:flex; align-items:center; justify-content:flex-end; gap:10px;}
+table.dt .rate-cell .bar{width:56px; height:6px; border-radius:3px; background:var(--well); overflow:hidden; flex:none;}
+table.dt .rate-cell .bar i{display:block; height:100%; border-radius:3px;}
+table.dt .rate-cell .n{font-family:var(--font-display); font-weight:600; min-width:48px; text-align:right;}
+.rchip{display:inline-flex; font-size:12px; font-weight:500; padding:3px 10px; border-radius:20px; white-space:nowrap;}
+.rchip.r-alto{background:var(--risk-soft); color:var(--risk-ink);}
+.rchip.r-medio{background:var(--warn-soft); color:var(--warn-ink);}
+.rchip.r-bajo{background:var(--surface-2); color:var(--ink-soft); border:1px solid var(--line-strong);}
+.flag-n{display:inline-block; font-size:11px; font-weight:600; color:var(--warn-ink); background:var(--warn-soft); border-radius:4px; padding:2px 6px; margin-left:7px; vertical-align:1px; letter-spacing:.02em;}
+
+/* ---- tooltip ---- */
+#tip{position:fixed; z-index:200; pointer-events:none; opacity:0; transition:opacity .12s;
+  background:var(--ink); color:var(--bg); border-radius:8px; padding:9px 12px; font-size:13px; line-height:1.45; max-width:260px; box-shadow:var(--sh-lift);}
+#tip.on{opacity:1;}
+#tip .tt-t{font-family:var(--font-display); font-weight:600; letter-spacing:-.01em; margin-bottom:4px;}
+#tip .tt-r{display:flex; justify-content:space-between; gap:18px; font-size:12px; font-variant-numeric:tabular-nums; opacity:.88;}
+#tip .tt-n{margin-top:6px; padding-top:5px; border-top:1px solid rgba(140,140,140,.35); font-size:12px; opacity:.85;}
+
+.empty{text-align:center; padding:56px 20px; color:var(--ink-faint); border:1px dashed var(--line-strong); border-radius:12px; background:var(--surface-2);}
+.empty .big{font-family:var(--font-display); font-weight:600; font-size:1.125rem; letter-spacing:-.02em; color:var(--ink-soft); margin-bottom:6px;}
+
+.panel{display:none;} .panel.on{display:block;}
+.foot{margin-top:24px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-faint); line-height:1.65;}
+code{font-family:var(--font-code); font-size:12px; background:var(--surface-2); border:1px solid var(--line-soft); padding:1px 5px; border-radius:4px;}
+
+@media (max-width:1080px){
+  /* al apilarse, la cifra va primero: es la lectura de 5 segundos */
+  .hero{grid-template-columns:1fr; gap:18px;}
+  .hero-figs{order:-1; border-left:none; padding-left:0;}
+  .matrix-side{border-top:1px solid var(--line-soft); padding-top:18px;}
+  .substats{grid-template-columns:repeat(4,auto); justify-content:start; gap:14px 28px;}
+  .c4,.c5,.c6,.c7,.c8{grid-column:span 12;}
+}
+@media (max-width:560px){
+  .substats{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:720px){
+  main{padding:16px 14px 56px;}
+  .cmd-row{padding:9px 14px; gap:8px 12px;}
+  .brand h1{font-size:16px;}
+  .tabbar .cmd-row{padding-top:0; padding-bottom:0;}
+  .hero-rate .v{font-size:2.5rem;}
+  .hbar{grid-template-columns:104px 1fr auto;}
+  .vbars{gap:6px;}
+}
+</style>
+
+<div class="cmdbar">
+  <div class="cmd-row">
+    <div class="brand"><span class="pulse"></span><h1>Radar de Rotación</h1></div>
+    <div class="fset">
+      <span class="fsel"><select id="f-dept" data-dim="Department" aria-label="Filtrar por departamento"></select></span>
+      <span class="fsel"><select id="f-role" data-dim="JobRole" aria-label="Filtrar por rol"></select></span>
+      <span class="seg" id="seg-ot" role="group" aria-label="Filtrar por horas extra">
+        <button data-v="" aria-pressed="true">Todos</button>
+        <button data-v="1" aria-pressed="false">Con extra</button>
+        <button data-v="0" aria-pressed="false">Sin extra</button>
+      </span>
+      <button class="btn-ghost" id="more" aria-expanded="false" aria-controls="extra">Más filtros</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-ghost clear" id="reset" disabled>Limpiar</button>
+  </div>
+
+  <div class="cmd-extra" id="extra" hidden>
+    <div class="cmd-row">
+      <div class="fset">
+        <span class="fsel"><select id="f-travel" data-dim="BusinessTravel" aria-label="Filtrar por frecuencia de viajes"></select></span>
+        <span class="fsel"><select id="f-civil" data-dim="MaritalStatus" aria-label="Filtrar por estado civil"></select></span>
+        <span class="fsel"><select id="f-gender" data-dim="Gender" aria-label="Filtrar por género"></select></span>
+        <span class="fsel"><select id="f-edu" data-dim="EducationField" aria-label="Filtrar por área de formación"></select></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <div class="cmd-row" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="panorama">Panorama</button>
+      <button role="tab" aria-selected="false" data-tab="carga">Compensación y carga</button>
+      <button role="tab" aria-selected="false" data-tab="clima">Clima interno</button>
+      <button role="tab" aria-selected="false" data-tab="carrera">Trayectoria</button>
+      <button role="tab" aria-selected="false" data-tab="detalle">Detalle</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="matrix-side">
+      <div class="matrix-head">
+        <div class="t" id="mtitle"></div>
+        <div class="mkey">
+          <span><i style="background:var(--risk)"></i>Se fueron</span>
+          <span><i style="background:var(--dot-stay)"></i>Permanecen</span>
+        </div>
+      </div>
+      <div class="matrix" id="matrix" role="img" aria-label="Cada cuadrado es un empleado de la selección actual"></div>
+      <div class="matrix-foot">Cada cuadrado es una persona. El bloque se achica cuando filtrás: si queda chico, la tasa de arriba deja de ser confiable.</div>
+    </div>
+    <div class="hero-figs">
+      <div class="hero-rate" id="heroRate"></div>
+      <div class="hero-lab" id="heroLab"></div>
+      <div class="substats" id="substats"></div>
+    </div>
+  </section>
+
+  <div id="alerts"></div>
+
+  <div class="panel on" id="panel-panorama"></div>
+  <div class="panel" id="panel-carga"></div>
+  <div class="panel" id="panel-clima"></div>
+  <div class="panel" id="panel-carrera"></div>
+  <div class="panel" id="panel-detalle"></div>
+
+  <div class="foot">
+    <b>Cómo leer este panel.</b> La <b>tasa de rotación</b> es el porcentaje de empleados de un grupo que dejaron la empresa.
+    La referencia de la compañía es <b>16,1%</b>: las barras en <span style="color:var(--risk-ink); font-weight:600;">clay</span> superan esa referencia por 1,5× o más,
+    las <span style="color:var(--warn-ink); font-weight:600;">ámbar</span> están por encima, las <span style="color:var(--ink-soft); font-weight:600;">grises</span> por debajo.
+    El <span style="color:var(--teal-ink); font-weight:600;">verde azulado</span> nunca significa un dato: marca lo que podés tocar.
+    Los grupos de menos de 30 empleados se marcan con <span class="flag-n">n bajo</span> porque su porcentaje es inestable.
+    Fuente: <code>data/processed/clean_data.csv</code> · el dataset es una foto única sin variable de fecha, por eso no hay gráficos de tendencia.
+  </div>
+</main>
+
+<div id="tip" role="tooltip"></div>
+
+<script id="rrhh-data" type="application/json">__DATA_PLACEHOLDER__</script>
+<script>
+(function(){
+"use strict";
+
+var RAW=JSON.parse(document.getElementById('rrhh-data').textContent);
+var COLS=RAW.cols, DIMS=RAW.dims, ROWS=RAW.rows;
+var C={}; COLS.forEach(function(n,i){C[n]=i;});
+var BASE=0.1612, MIN_N=30;
+
+var state={tab:'panorama', f:{Department:'',JobRole:'',BusinessTravel:'',MaritalStatus:'',Gender:'',EducationField:'',OverTime:''}, sort:{key:'rate',dir:-1}, dim:'JobRole'};
+
+function pct(x,d){return (x*100).toFixed(d===undefined?1:d).replace('.',',')+'%';}
+function num(n){return n.toLocaleString('es-AR');}
+function money(n){return '$'+Math.round(n).toLocaleString('es-AR');}
+function dec(n,d){return n.toFixed(d===undefined?1:d).replace('.',',');}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function jattr(o){return esc(JSON.stringify(o));}
+
+var ROLE_ES={'Sales Executive':'Ejecutivo de Ventas','Research Scientist':'Científico de Inv.','Laboratory Technician':'Técnico de Lab.','Manufacturing Director':'Dir. de Manufactura','Healthcare Representative':'Rep. de Salud','Manager':'Manager','Sales Representative':'Rep. de Ventas','Research Director':'Dir. de Investigación','Human Resources':'Recursos Humanos'};
+var DEPT_ES={'Human Resources':'Recursos Humanos','Research & Development':'Investigación y Desarrollo','Sales':'Ventas'};
+var TRAVEL_ES={'Non-Travel':'No viaja','Travel_Rarely':'Viaja poco','Travel_Frequently':'Viaja seguido'};
+var CIVIL_ES={'Single':'Soltero/a','Married':'Casado/a','Divorced':'Divorciado/a'};
+var GENDER_ES={'Female':'Femenino','Male':'Masculino'};
+var EDU_ES={'Life Sciences':'Ciencias de la Vida','Medical':'Medicina','Marketing':'Marketing','Technical Degree':'Título Técnico','Human Resources':'Recursos Humanos','Other':'Otros'};
+var LABELS={Department:DEPT_ES,JobRole:ROLE_ES,BusinessTravel:TRAVEL_ES,MaritalStatus:CIVIL_ES,Gender:GENDER_ES,EducationField:EDU_ES};
+var DIMLAB={Department:'Departamento',JobRole:'Rol',BusinessTravel:'Viajes',MaritalStatus:'Estado civil',Gender:'Género',EducationField:'Formación'};
+function lbl(d,v){return (LABELS[d]&&LABELS[d][v])||v;}
+
+var LIKERT={
+  JobSatisfaction:{t:'Satisfacción con el puesto',m:{1:'Baja',2:'Media',3:'Alta',4:'Muy alta'}},
+  EnvironmentSatisfaction:{t:'Satisfacción con el ambiente',m:{1:'Baja',2:'Media',3:'Alta',4:'Muy alta'}},
+  WorkLifeBalance:{t:'Equilibrio vida-trabajo',m:{1:'Malo',2:'Bueno',3:'Muy bueno',4:'Excelente'}},
+  RelationshipSatisfaction:{t:'Relaciones interpersonales',m:{1:'Baja',2:'Media',3:'Alta',4:'Muy alta'}},
+  JobInvolvement:{t:'Involucramiento',m:{1:'Bajo',2:'Medio',3:'Alto',4:'Muy alto'}}
+};
+
+function filtered(){
+  var f=state.f,out=[];
+  for(var i=0;i<ROWS.length;i++){
+    var r=ROWS[i],ok=true;
+    for(var k in f){
+      if(f[k]==='') continue;
+      if(k==='OverTime'){ if(String(r[C.OverTime])!==f[k]){ok=false;break;} }
+      else if(DIMS[k][r[C[k]]]!==f[k]){ok=false;break;}
+    }
+    if(ok) out.push(r);
+  }
+  return out;
+}
+function leavers(rs){var s=0;for(var i=0;i<rs.length;i++)s+=rs[i][0];return s;}
+function rate(rs){return rs.length?leavers(rs)/rs.length:0;}
+function avg(rs,c){if(!rs.length)return 0;var s=0;for(var i=0;i<rs.length;i++)s+=rs[i][C[c]];return s/rs.length;}
+function avgIf(rs,c,a){var s=0,n=0;for(var i=0;i<rs.length;i++){if(rs[i][0]===a){s+=rs[i][C[c]];n++;}}return n?s/n:0;}
+function groupBy(rs,dim){
+  var acc=DIMS[dim].map(function(v){return {key:v,label:lbl(dim,v),n:0,k:0};});
+  for(var i=0;i<rs.length;i++){var g=acc[rs[i][C[dim]]];g.n++;g.k+=rs[i][0];}
+  return acc.filter(function(g){return g.n>0;}).map(function(g){g.rate=g.k/g.n;return g;});
+}
+function bucket(rs,col,bs){
+  var acc=bs.map(function(b){return {label:b.label,n:0,k:0,note:b.note||''};});
+  for(var i=0;i<rs.length;i++){
+    var v=rs[i][C[col]];
+    for(var j=0;j<bs.length;j++){ if(v>=bs[j].min&&v<=bs[j].max){acc[j].n++;acc[j].k+=rs[i][0];break;} }
+  }
+  return acc.filter(function(g){return g.n>0;}).map(function(g){g.rate=g.k/g.n;return g;});
+}
+function risk(r){return r>=BASE*1.5?'risk':(r>BASE?'warn':'calm');}
+function riskWord(r){return {risk:'Alto',warn:'Medio',calm:'Bajo'}[risk(r)];}
+function tipOf(d){
+  return {title:d.label, rows:[['Tasa de rotación',pct(d.rate)],['Se fueron',num(d.k)+' de '+num(d.n)]],
+    note:d.n<MIN_N?'Muestra chica ('+d.n+' empleados): el porcentaje es inestable.':(d.note||'')};
+}
+
+/* ---- barras horizontales (categorías nominales, ordenadas por valor) ---- */
+function hbars(items,o){
+  o=o||{};
+  var max=Math.max.apply(null,items.map(function(d){return d.rate;}).concat([BASE*1.2]));
+  var h='<div class="hbars" style="--lw:'+(o.lw||150)+'px">';
+  items.forEach(function(d){
+    var k=risk(d.rate);
+    h+='<div class="hbar" data-tip="'+jattr(tipOf(d))+'">'
+      +'<div class="lab">'+esc(d.label)+(d.n<MIN_N?'<span class="flag-n">n '+d.n+'</span>':'')+'</div>'
+      +'<div class="track"><div class="fill f-'+k+'" style="width:'+(d.rate/max*100).toFixed(1)+'%"></div></div>'
+      +'<div class="val '+{risk:'t-r',warn:'t-w',calm:'t-c'}[k]+'">'+pct(d.rate)+'</div></div>';
+  });
+  h+='</div>';
+  if(o.key!==false) h+=scaleKey();
+  return h;
+}
+function scaleKey(){
+  return '<div class="scale-key"><span><i style="background:var(--risk)"></i>≥24,2%</span>'
+    +'<span><i style="background:var(--warn)"></i>&gt;16,1%</span>'
+    +'<span><i style="background:var(--calm)"></i>bajo la referencia</span></div>';
+}
+
+/* ---- columnas verticales (datos ordenados: se leen como progresión) ---- */
+function vbars(items,o){
+  o=o||{};
+  var max=Math.max.apply(null,items.map(function(d){return d.rate;}));
+  if(max<=0)max=1;
+  var h='<div class="vbars">';
+  items.forEach(function(d){
+    var k=risk(d.rate);
+    h+='<div class="vcol" data-tip="'+jattr(tipOf(d))+'">'
+      +'<div class="vval '+{risk:'t-r',warn:'t-w',calm:'t-c'}[k]+'">'+pct(d.rate,0)+'</div>'
+      +'<div class="vplot" style="--vh:'+(o.h||148)+'px"><div class="vbar f-'+k+'" style="height:'+Math.max(3,d.rate/max*100).toFixed(1)+'%"></div></div>'
+      +'<div class="vlab">'+esc(d.label)+'</div>'
+      +'<div class="vn">'+num(d.n)+(d.n<MIN_N?' ⚠':'')+'</div></div>';
+  });
+  return h+'</div>'+(o.key===true?scaleKey():'');
+}
+function pairBars(items,o){
+  o=o||{};
+  var max=0; items.forEach(function(d){max=Math.max(max,d.stay,d.leave);});
+  if(max<=0)max=1;
+  var h='<div class="vbars">';
+  items.forEach(function(d){
+    var tot=d.stay+d.leave,r=tot?d.leave/tot:0;
+    h+='<div class="vcol" data-tip="'+jattr({title:d.label,rows:[['Permanecen',num(d.stay)],['Se fueron',num(d.leave)],['Tasa',pct(r)]]})+'">'
+      +'<div class="vval t-c">'+pct(r,0)+'</div>'
+      +'<div class="vplot" style="--vh:'+(o.h||148)+'px"><div class="pair">'
+      +'<div class="p" style="background:var(--dot-stay); height:'+Math.max(3,d.stay/max*100).toFixed(1)+'%"></div>'
+      +'<div class="p f-risk" style="height:'+Math.max(3,d.leave/max*100).toFixed(1)+'%"></div>'
+      +'</div></div><div class="vlab">'+esc(d.label)+'</div><div class="vn">'+num(tot)+'</div></div>';
+  });
+  return h+'</div><div class="legend"><span><i style="background:var(--dot-stay)"></i>Permanecen</span><span><i style="background:var(--risk)"></i>Se fueron</span><span style="color:var(--ink-faint)">El % es la tasa del tramo</span></div>';
+}
+
+/* ---- dispersión con la zona de riesgo anotada ---- */
+function scatter(rs){
+  var W=660,H=310,P={t:16,r:16,b:40,l:58},maxY=20000,maxX=40;
+  var zx=P.l+(10/maxX)*(W-P.l-P.r), zy=P.t+(1-5000/maxY)*(H-P.t-P.b);
+  var s='<svg class="scatter" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Ingreso mensual contra años en la empresa">';
+  s+='<rect class="sc-zone" x="'+P.l+'" y="'+zy.toFixed(1)+'" width="'+(zx-P.l).toFixed(1)+'" height="'+(H-P.b-zy).toFixed(1)+'"/>';
+  [0,5000,10000,15000,20000].forEach(function(v){
+    var y=P.t+(1-v/maxY)*(H-P.t-P.b);
+    s+='<line class="sc-grid" x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/>'
+      +'<text class="sc-tick" x="'+(P.l-8)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end">'+(v/1000)+'k</text>';
+  });
+  [0,10,20,30,40].forEach(function(v){
+    var x=P.l+(v/maxX)*(W-P.l-P.r);
+    s+='<text class="sc-tick" x="'+x.toFixed(1)+'" y="'+(H-P.b+17)+'" text-anchor="middle">'+v+'</text>';
+  });
+  s+='<line class="sc-axis" x1="'+P.l+'" x2="'+(W-P.r)+'" y1="'+(H-P.b)+'" y2="'+(H-P.b)+'"/>';
+  s+='<text class="sc-axtitle" x="'+((P.l+W-P.r)/2)+'" y="'+(H-5)+'" text-anchor="middle">AÑOS EN LA EMPRESA</text>';
+  s+='<text class="sc-axtitle" x="-'+((P.t+H-P.b)/2)+'" y="13" text-anchor="middle" transform="rotate(-90)">INGRESO MENSUAL</text>';
+  var stay='',leave='';
+  for(var i=0;i<rs.length;i++){
+    var r=rs[i], j=((r[C.EmployeeNumber]*37)%100)/100-0.5;
+    var x=P.l+(Math.min(r[C.YearsAtCompany]+j*0.7,maxX)/maxX)*(W-P.l-P.r);
+    var y=P.t+(1-Math.min(r[C.MonthlyIncome],maxY)/maxY)*(H-P.t-P.b);
+    var c='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r[0]?2.8:2.2)+'"/>';
+    if(r[0])leave+=c; else stay+=c;
+  }
+  s+='<g class="sc-stay">'+stay+'</g><g class="sc-leave">'+leave+'</g>';
+  s+='<line class="sc-zone-line" x1="'+zx.toFixed(1)+'" y1="'+zy.toFixed(1)+'" x2="'+zx.toFixed(1)+'" y2="'+(H-P.b)+'"/>';
+  s+='<line class="sc-zone-line" x1="'+P.l+'" y1="'+zy.toFixed(1)+'" x2="'+zx.toFixed(1)+'" y2="'+zy.toFixed(1)+'"/>';
+  s+='<text class="sc-zone-lab" x="'+(zx+8).toFixed(1)+'" y="'+(zy+14).toFixed(1)+'">ZONA DE MAYOR RIESGO</text>';
+  s+='</svg><div class="legend"><span><i style="background:var(--dot-stay)"></i>Permanecen</span><span><i style="background:var(--risk)"></i>Se fueron</span><span style="color:var(--ink-faint)">Cada punto es un empleado</span></div>';
+  return s;
+}
+
+function card(o){
+  return '<div class="card '+(o.cls||'c6')+'">'
+    +'<h3>'+o.title+'</h3>'+(o.sub?'<div class="sub">'+o.sub+'</div>':'')
+    +'<div class="body">'+o.body+'</div>'
+    +(o.insight?'<div class="insight'+(o.tag?' flag t-'+o.tone:'')+'">'+(o.tag?'<span class="tag">'+o.tag+'</span>':'')+'<div>'+o.insight+'</div></div>':'')
+    +'</div>';
+}
+
+/* ================= HERO ================= */
+function renderHero(rs){
+  var n=rs.length,k=leavers(rs),r=n?k/n:0,any=isFiltered();
+  var mh=''; for(var i=0;i<k;i++) mh+='<i class="leave"></i>';
+  for(var j=0;j<n-k;j++) mh+='<i></i>';
+  var mx=document.getElementById('matrix');
+  mx.innerHTML=mh; mx.style.animation='none'; void mx.offsetWidth; mx.style.animation='';
+  mx.setAttribute('aria-label',num(n)+' empleados en la selección, '+num(k)+' se fueron');
+
+  document.getElementById('mtitle').innerHTML= any
+    ? '<b>'+num(n)+'</b> de 1.470 empleados en la selección'
+    : '<b>1.470</b> empleados · plantilla completa';
+
+  var d=r-BASE, over=r>BASE;
+  document.getElementById('heroRate').className='hero-rate'+(over?' over':'');
+  document.getElementById('heroRate').innerHTML='<span class="v">'+pct(r)+'</span>'
+    +(any&&Math.abs(d)>=0.005?'<span class="delta '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+dec(Math.abs(d*100))+' pts</span>':'');
+  document.getElementById('heroLab').textContent= any
+    ? 'rotación en la selección · la compañía está en 16,1%'
+    : 'rotación general de la compañía';
+
+  var gl=avgIf(rs,'MonthlyIncome',1), gs=avgIf(rs,'MonthlyIncome',0);
+  document.getElementById('substats').innerHTML=
+     '<div class="substat"><div class="n risk">'+num(k)+'</div><div class="l">se fueron</div></div>'
+    +'<div class="substat"><div class="n">'+num(n-k)+'</div><div class="l">permanecen</div></div>'
+    +'<div class="substat"><div class="n">'+(n?money(avg(rs,'MonthlyIncome')):'—')+'</div><div class="l">ingreso promedio</div></div>'
+    +(gl&&gs?'<div class="substat"><div class="n">'+money(gs-gl)+'</div><div class="l">brecha salarial</div></div>':'');
+}
+
+function renderAlerts(rs){
+  var el=document.getElementById('alerts'),n=rs.length;
+  if(!n){el.innerHTML='';return;}
+  var r=rate(rs),out=[];
+  var warn='<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 6.5v4.2M10 13.8v.1M10 2.5 1.8 16.5h16.4L10 2.5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ok='<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="m6.8 10.2 2.2 2.2 4.4-4.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  if(n<MIN_N){
+    out.push('<div class="alertstrip tone-warn">'+warn+'<div><b>Muestra chica: '+n+' empleados.</b> Un solo caso mueve la tasa varios puntos. Ampliá los filtros antes de sacar conclusiones.</div></div>');
+  }else{
+    var roles=groupBy(rs,'JobRole').filter(function(g){return g.n>=MIN_N;}).sort(function(a,b){return b.rate-a.rate;});
+    var top=roles[0];
+    if(top&&top.rate>=BASE*1.4){
+      out.push('<div class="alertstrip tone-risk">'+warn+'<div><b>Zona de riesgo: '+esc(top.label)+'.</b> '+pct(top.rate)+' de rotación ('+top.k+' de '+top.n+' empleados), '+dec(top.rate/BASE)+'× la referencia de la compañía.</div></div>');
+    }else if(r<BASE*0.75){
+      out.push('<div class="alertstrip tone-ok">'+ok+'<div><b>Grupo estable.</b> La rotación de esta selección ('+pct(r)+') está bastante por debajo de la referencia. No hay zonas críticas.</div></div>');
+    }
+  }
+  el.innerHTML=out.join('');
+}
+
+/* ================= PANELES ================= */
+function panorama(rs){
+  var roles=groupBy(rs,'JobRole').sort(function(a,b){return b.rate-a.rate;});
+  var depts=groupBy(rs,'Department').sort(function(a,b){return b.rate-a.rate;});
+  var civil=groupBy(rs,'MaritalStatus').sort(function(a,b){return b.rate-a.rate;});
+  var edu=groupBy(rs,'EducationField').sort(function(a,b){return b.rate-a.rate;});
+  // BusinessTravel es ordinal: se arma en orden de exposición, no por valor
+  var tOrder=['Non-Travel','Travel_Rarely','Travel_Frequently'];
+  var travel=tOrder.map(function(key){
+    var sub=rs.filter(function(x){return DIMS.BusinessTravel[x[C.BusinessTravel]]===key;});
+    return {label:TRAVEL_ES[key],n:sub.length,k:leavers(sub),rate:sub.length?rate(sub):0};
+  }).filter(function(g){return g.n>0;});
+
+  var big=roles.filter(function(g){return g.n>=MIN_N;}), hi=big[0], lo=big[big.length-1];
+  var f=travel[travel.length-1], nn=travel[0];
+
+  return '<div class="grid">'
+    +card({cls:'c7',title:'Rotación por rol',sub:'Ordenado de mayor a menor pérdida de talento',body:hbars(roles,{lw:162}),
+      insight:(hi&&lo&&hi!==lo)?'Entre el rol que más pierde gente (<b>'+esc(hi.label)+'</b>, '+pct(hi.rate)+') y el que menos (<b>'+esc(lo.label)+'</b>, '+pct(lo.rate)+') hay <b>'+dec((hi.rate-lo.rate)*100)+' puntos</b>. La rotación no es un problema uniforme: se concentra en roles puntuales.':'No hay roles con muestra suficiente para comparar.',
+      tag:(hi&&hi.rate>=BASE*1.5)?'Foco':'',tone:'risk'})
+    +card({cls:'c5',title:'Rotación por departamento',sub:'Las tres áreas de la empresa',body:hbars(depts,{lw:170,key:false}),
+      insight:depts.length?'<b>'+esc(depts[0].label)+'</b> encabeza con '+pct(depts[0].rate)+'. Un área grande con tasa moderada puede perder más gente en total que una chica con tasa alta: mirá siempre cuántas personas hay detrás del porcentaje.':'—'})
+    +card({cls:'c5',title:'Rotación por frecuencia de viajes',sub:'De menor a mayor exposición a viajes',body:vbars(travel,{h:140}),
+      insight:(f&&nn&&nn.rate)?'Quienes viajan seguido rotan <b>'+dec(f.rate/nn.rate)+'×</b> más que quienes no viajan ('+pct(f.rate)+' vs '+pct(nn.rate)+'). Vale revisar la carga de viajes de los equipos afectados.':'—',
+      tag:'Acción',tone:'warn'})
+    +card({cls:'c7',title:'Rotación por área de formación',sub:'Ordenado por tasa',body:hbars(edu,{lw:162,key:false}),
+      insight:'Sirve para detectar si la pérdida se concentra en un perfil profesional concreto, algo que cambia dónde hay que buscar reemplazos.'})
+    +card({cls:'c12',title:'Rotación por estado civil',sub:'Un cruce demográfico que suele sorprender a los equipos de RRHH',body:hbars(civil,{lw:170,key:false}),
+      insight:(function(){var s=civil.filter(function(t){return t.key==='Single';})[0];
+        return s?'Los empleados <b>solteros</b> muestran la tasa más alta ('+pct(s.rate)+'). Cuidado con la lectura: el estado civil va de la mano de la edad, y los empleados jóvenes ya rotan más de por sí. Correlación, no causa.':'—';})(),
+      tag:'Cuidado',tone:'warn'})
+    +'</div>';
+}
+
+function carga(rs){
+  var ot=[{label:'Sin horas extra',key:0},{label:'Con horas extra',key:1}].map(function(o){
+    var sub=rs.filter(function(x){return x[C.OverTime]===o.key;});
+    return {label:o.label,n:sub.length,k:leavers(sub),rate:sub.length?rate(sub):0};
+  }).filter(function(g){return g.n>0;});
+  var inc=bucket(rs,'MonthlyIncome',[{label:'< $3k',min:0,max:2999},{label:'$3–5k',min:3000,max:4999},{label:'$5–8k',min:5000,max:7999},{label:'$8–12k',min:8000,max:11999},{label:'$12k+',min:12000,max:99999}]);
+  var dist=bucket(rs,'DistanceFromHome',[{label:'1–5',min:1,max:5},{label:'6–10',min:6,max:10},{label:'11–15',min:11,max:15},{label:'16–20',min:16,max:20},{label:'21+',min:21,max:99}]);
+  var lvl=bucket(rs,'JobLevel',[1,2,3,4,5].map(function(v){return {label:'Nivel '+v,min:v,max:v};}));
+  var y=ot.filter(function(o){return o.key===1;})[0], nn=ot.filter(function(o){return o.key===0;})[0];
+  var mult=(y&&nn&&nn.rate)?y.rate/nn.rate:0;
+  var gl=avgIf(rs,'MonthlyIncome',1), gs=avgIf(rs,'MonthlyIncome',0);
+
+  return '<div class="grid">'
+    +card({cls:'c5',title:'Horas extra',sub:'La variable individual con mayor asociación a la rotación',body:hbars(ot,{lw:132,key:false}),
+      insight:mult?'Quienes hacen horas extra rotan <b>'+dec(mult)+'× más</b> ('+pct(y.rate)+' vs '+pct(nn.rate)+'). Es la palanca más accionable del panel: depende de decisiones internas de carga de trabajo, no del mercado.':'Mostrá ambos grupos para comparar.',
+      tag:'Acción',tone:'risk'})
+    +card({cls:'c7',title:'Rotación por tramo de ingreso',sub:'Sobre MonthlyIncome, el único campo salarial real del dataset',body:vbars(inc,{h:150}),
+      insight:(gl&&gs)?'Quienes se van ganan en promedio <b>'+money(gs-gl)+' menos</b> por mes ('+money(gl)+' vs '+money(gs)+'). El riesgo baja de forma sostenida a medida que sube el tramo.':'—'})
+    +card({cls:'c7',title:'Ingreso contra antigüedad',sub:'Cada punto es un empleado. El recuadro marca la zona de mayor riesgo',body:scatter(rs),
+      insight:'Las salidas se apilan en el <b>ángulo inferior izquierdo</b>: menos de 10 años en la empresa y menos de $5.000 mensuales. Es el perfil donde una intervención temprana rinde más.'})
+    +card({cls:'c5',title:'Rotación por nivel jerárquico',sub:'Del nivel de entrada al más alto',body:vbars(lvl,{h:150}),
+      insight:lvl[0]?'El <b>nivel 1</b> concentra '+pct(lvl[0].rate)+'. Los puestos de entrada acumulan los dos factores anteriores: sueldos bajos y poca antigüedad.':'—'})
+    +card({cls:'c12',title:'Rotación por distancia al trabajo',sub:'Unidad de distancia no especificada por IBM en el dataset original',body:vbars(dist,{h:140}),
+      insight:(function(){var far=dist[dist.length-1],near=dist[0];
+        return (far&&near&&near.rate)?'El tramo más lejano rota <b>'+dec(far.rate/near.rate)+'×</b> más que el más cercano. Un esquema híbrido o un subsidio de transporte apunta directo a este grupo.':'—';})(),
+      tag:'Acción',tone:'warn'})
+    +'</div>';
+}
+
+function clima(rs){
+  var sm='';
+  Object.keys(LIKERT).forEach(function(col){
+    var m=LIKERT[col];
+    var items=bucket(rs,col,[1,2,3,4].map(function(v){return {label:m.m[v],min:v,max:v};}));
+    var w=items[0],b=items[items.length-1];
+    var sp=(w&&b)?(w.rate-b.rate)*100:0;
+    sm+='<div class="sm"><h4>'+m.t+'</h4><div class="smsub">'+(sp>0?'Brecha de '+dec(sp)+' pts entre el peor y el mejor nivel':'Sin variación en esta selección')+'</div>'+vbars(items,{h:104})+'</div>';
+  });
+  var js=bucket(rs,'JobSatisfaction',[1,2,3,4].map(function(v){return {label:LIKERT.JobSatisfaction.m[v],min:v,max:v};}));
+  var wl=bucket(rs,'WorkLifeBalance',[1,2,3,4].map(function(v){return {label:LIKERT.WorkLifeBalance.m[v],min:v,max:v};}));
+
+  return '<div class="grid">'
+    +card({cls:'c12',title:'Las cinco escalas de clima interno',sub:'Todas van del peor al mejor nivel. Se muestran las etiquetas en vez de los números 1-4, para que se lean sin conocer la codificación del dataset',
+      body:'<div class="sm-grid">'+sm+'</div>',
+      insight:(function(){var b=[];
+        if(js[0])b.push('satisfacción con el puesto <b>'+esc(js[0].label.toLowerCase())+'</b> → '+pct(js[0].rate));
+        if(wl[0])b.push('equilibrio vida-trabajo <b>'+esc(wl[0].label.toLowerCase())+'</b> → '+pct(wl[0].rate));
+        return b.length?'Los peores niveles son los que más rotación concentran: '+b.join(' y ')+'. Son las dos encuestas donde una mejora tiene retorno más directo.':'—';})(),
+      tag:'Foco',tone:'risk'})
+    +card({cls:'c12',title:'Por qué no aparece la calificación de desempeño',sub:'Una variable que el dataset trae pero que no puede explicar nada',
+      body:'<div style="font-size:14px; color:var(--ink-soft); line-height:1.6; max-width:78ch;">'
+        +'El campo <code>PerformanceRating</code> tiene una escala teórica de 1 a 4, pero en los 1.470 registros <b style="color:var(--ink)">solo aparecen los valores 3 y 4</b>: todos los empleados están calificados “Excelente” u “Excepcional”. Sin variación real no puede explicar por qué unos se van y otros se quedan, así que se excluyó del panel a propósito.'
+        +'</div>',
+      insight:'Lo detectó solo el generador del diccionario de datos, que compara la escala teórica contra los valores realmente presentes y marca los niveles que nunca ocurren.'})
+    +'</div>';
+}
+
+function carrera(rs){
+  var ten=bucket(rs,'YearsAtCompany',[{label:'< 2 años',min:0,max:1},{label:'2–5',min:2,max:5},{label:'6–10',min:6,max:10},{label:'10+',min:11,max:99}]);
+  var promo=bucket(rs,'YearsSinceLastPromotion',[{label:'Este año',min:0,max:0,note:'Promovido hace menos de 1 año — no significa “nunca promovido”.'},{label:'1–3 años',min:1,max:3},{label:'4–7',min:4,max:7},{label:'7+',min:8,max:99}]);
+  var mgr=bucket(rs,'YearsWithCurrManager',[{label:'< 2 años',min:0,max:1},{label:'2–5',min:2,max:5},{label:'5+',min:6,max:99}]);
+  var age=[{label:'18–25',min:18,max:25},{label:'26–35',min:26,max:35},{label:'36–45',min:36,max:45},{label:'46–55',min:46,max:55},{label:'56+',min:56,max:99}].map(function(b){
+    var sub=rs.filter(function(x){return x[C.Age]>=b.min&&x[C.Age]<=b.max;});
+    return {label:b.label,stay:sub.filter(function(x){return x[0]===0;}).length,leave:sub.filter(function(x){return x[0]===1;}).length};
+  }).filter(function(b){return b.stay+b.leave>0;});
+  var t0=ten[0],p0=promo[0],rest=promo.slice(1);
+  var rn=rest.reduce(function(a,b){return a+b.n;},0), rk=rest.reduce(function(a,b){return a+b.k;},0), rr=rn?rk/rn:0;
+
+  return '<div class="grid">'
+    +card({cls:'c6',title:'Rotación por antigüedad',sub:'Dónde, en la vida del empleado, se concentra el riesgo',body:vbars(ten,{h:150,key:true}),
+      insight:t0?'Los empleados con <b>menos de 2 años</b> rotan al '+pct(t0.rate)+', y la tasa cae de forma sostenida con cada tramo. Si alguien supera los primeros dos años, la probabilidad de que se vaya baja mucho: el onboarding y el primer año son la ventana de intervención.':'—',
+      tag:'Acción',tone:'risk'})
+    +card({cls:'c6',title:'Edad: quiénes se van y quiénes se quedan',sub:'Cantidad de personas por tramo, no porcentaje',body:pairBars(age,{h:150}),
+      insight:'Las salidas se concentran en <b>26–35</b> y <b>18–25</b>. Coincide con el corte por antigüedad: son perfiles con menos años en la empresa y más movilidad en el mercado.'})
+    +card({cls:'c6',title:'Años desde la última promoción',sub:'Leer con la nota metodológica al lado',body:vbars(promo,{h:150}),
+      insight:(p0&&rr)?'El grupo promovido <b>este año</b> rota más ('+pct(p0.rate)+' vs '+pct(rr)+' del resto), pero <b>eso no significa que promover cause rotación</b>: ese grupo tiene la mitad de antigüedad promedio que el resto (4,4 vs 8,7 años), así que lo que se mide es mayormente el efecto de ser empleado nuevo. Es una <b>variable de confusión</b>, no una relación causal.':'—',
+      tag:'Cuidado',tone:'warn'})
+    +card({cls:'c6',title:'Años con el manager actual',sub:'La relación con la jefatura directa como factor de permanencia',body:vbars(mgr,{h:150}),
+      insight:mgr[0]?'Menos de 2 años con el manager actual → '+pct(mgr[0].rate)+'. Puede reflejar dos cosas que el dataset no separa: vínculos nuevos que todavía no se consolidaron, o equipos que acaban de cambiar de jefatura.':'—'})
+    +'</div>';
+}
+
+function detalle(rs){
+  var g=groupBy(rs,state.dim).map(function(x){
+    var sub=rs.filter(function(r){return DIMS[state.dim][r[C[state.dim]]]===x.key;});
+    x.income=avg(sub,'MonthlyIncome'); x.tenure=avg(sub,'YearsAtCompany'); x.age=avg(sub,'Age');
+    return x;
+  });
+  var key=state.sort.key,dir=state.sort.dir;
+  g.sort(function(a,b){var va=key==='label'?a.label:a[key],vb=key==='label'?b.label:b[key];
+    return typeof va==='string'?dir*va.localeCompare(vb):dir*(va-vb);});
+  var max=Math.max.apply(null,g.map(function(x){return x.rate;}).concat([0.01]));
+
+  var sel='<select id="dimsel" aria-label="Agrupar la tabla por" style="appearance:none; font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer;">';
+  Object.keys(DIMLAB).forEach(function(d){sel+='<option value="'+d+'"'+(d===state.dim?' selected':'')+'>'+DIMLAB[d]+'</option>';});
+  sel+='</select>';
+
+  function th(k,l,c){var on=key===k;
+    return '<th class="sortable '+(c||'')+'"'+(on?' aria-sort="'+(dir>0?'ascending':'descending')+'"':'')+' data-sort="'+k+'">'+l+'<span class="caret">'+(on?(dir>0?'▲':'▼'):'⇅')+'</span></th>';}
+
+  var body=g.map(function(x){
+    return '<tr><td><b>'+esc(x.label)+'</b>'+(x.n<MIN_N?'<span class="flag-n">n bajo</span>':'')+'</td>'
+      +'<td class="num">'+num(x.n)+'</td><td class="num">'+num(x.k)+'</td>'
+      +'<td class="num"><div class="rate-cell"><span class="bar"><i class="f-'+risk(x.rate)+'" style="width:'+(x.rate/max*100).toFixed(1)+'%"></i></span><span class="n">'+pct(x.rate)+'</span></div></td>'
+      +'<td class="num">'+money(x.income)+'</td><td class="num">'+dec(x.tenure)+'</td><td class="num">'+dec(x.age)+'</td>'
+      +'<td><span class="rchip r-'+riskWord(x.rate).toLowerCase()+'">'+riskWord(x.rate)+'</span></td></tr>';
+  }).join('');
+  var flagged=g.filter(function(x){return x.n<MIN_N;});
+
+  return '<div class="grid"><div class="card c12">'
+    +'<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">'
+    +'<div><h3>Tabla de desglose</h3><div class="sub">Ordená por cualquier columna. Respeta los filtros de la cabecera.</div></div>'
+    +'<div style="display:flex; align-items:center; gap:9px;"><span class="micro">Agrupar por</span>'+sel+'</div></div>'
+    +'<div class="body"><div class="tbl-wrap"><table class="dt"><thead><tr>'
+    +th('label',DIMLAB[state.dim])+th('n','Personas','num')+th('k','Se fueron','num')+th('rate','Tasa','num')
+    +th('income','Ingreso prom.','num')+th('tenure','Antigüedad','num')+th('age','Edad prom.','num')+'<th>Riesgo</th>'
+    +'</tr></thead><tbody>'+body+'</tbody></table></div></div>'
+    +'<div class="insight'+(flagged.length?' flag t-warn':'')+'">'+(flagged.length?'<span class="tag">Cuidado</span>':'')+'<div>'
+    +(flagged.length?'<b>'+flagged.length+' grupo'+(flagged.length>1?'s':'')+' con menos de 30 personas</b> ('+flagged.map(function(x){return esc(x.label)+' · n='+x.n;}).join(', ')+'). Sus porcentajes son inestables y no deberían sostener una decisión por sí solos.'
+      :'Todos los grupos de esta vista superan las 30 personas, así que las tasas son razonablemente estables.')
+    +'</div></div></div></div>';
+}
+
+/* ================= RENDER ================= */
+var PANELS={panorama:panorama,carga:carga,clima:clima,carrera:carrera,detalle:detalle};
+function isFiltered(){return Object.keys(state.f).some(function(k){return state.f[k]!=='';});}
+
+function render(){
+  var rs=filtered();
+  renderHero(rs); renderAlerts(rs);
+  var host=document.getElementById('panel-'+state.tab);
+  host.innerHTML= rs.length ? PANELS[state.tab](rs)
+    : '<div class="empty"><div class="big">Ningún empleado coincide</div><div>La combinación de filtros dejó la selección vacía. Quitá alguno para volver a ver datos.</div></div>';
+  document.getElementById('reset').disabled=!isFiltered();
+  document.querySelectorAll('#f-dept,#f-role,#f-travel,#f-civil,#f-gender,#f-edu').forEach(function(s){
+    s.classList.toggle('active', s.value!=='');
+  });
+  var extraOn=['BusinessTravel','MaritalStatus','Gender','EducationField'].filter(function(k){return state.f[k]!=='';}).length;
+  document.getElementById('more').textContent = extraOn ? 'Más filtros · '+extraOn : 'Más filtros';
+}
+
+/* ================= EVENTOS ================= */
+document.querySelectorAll('select[data-dim]').forEach(function(s){
+  var dim=s.dataset.dim, h='<option value="">'+DIMLAB[dim]+': todos</option>';
+  DIMS[dim].forEach(function(v){h+='<option value="'+esc(v)+'">'+esc(lbl(dim,v))+'</option>';});
+  s.innerHTML=h;
+  s.addEventListener('change',function(){state.f[dim]=s.value; render();});
+});
+document.getElementById('seg-ot').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b)return;
+  state.f.OverTime=b.dataset.v;
+  this.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+  render();
+});
+document.getElementById('more').addEventListener('click',function(){
+  var x=document.getElementById('extra'), open=this.getAttribute('aria-expanded')==='true';
+  this.setAttribute('aria-expanded',String(!open)); x.hidden=open;
+});
+document.getElementById('reset').addEventListener('click',function(){
+  Object.keys(state.f).forEach(function(k){state.f[k]='';});
+  document.querySelectorAll('select[data-dim]').forEach(function(s){s.value='';});
+  document.querySelectorAll('#seg-ot button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.v===''?'true':'false');});
+  render();
+});
+document.querySelector('.tabbar').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-tab]'); if(!b)return;
+  state.tab=b.dataset.tab;
+  this.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-selected',x===b?'true':'false');});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('on');});
+  document.getElementById('panel-'+state.tab).classList.add('on');
+  render();
+});
+document.addEventListener('click',function(e){
+  var th=e.target.closest('th[data-sort]'); if(!th)return;
+  var k=th.dataset.sort;
+  if(state.sort.key===k) state.sort.dir*=-1; else state.sort={key:k,dir:k==='label'?1:-1};
+  render();
+});
+document.addEventListener('change',function(e){
+  if(e.target.id==='dimsel'){state.dim=e.target.value; state.sort={key:'rate',dir:-1}; render();}
+});
+
+var tip=document.getElementById('tip');
+document.addEventListener('mouseover',function(e){
+  var el=e.target.closest('[data-tip]'); if(!el)return;
+  var d; try{d=JSON.parse(el.dataset.tip);}catch(err){return;}
+  var h='<div class="tt-t">'+esc(d.title)+'</div>';
+  (d.rows||[]).forEach(function(r){h+='<div class="tt-r"><span>'+esc(r[0])+'</span><span>'+esc(r[1])+'</span></div>';});
+  if(d.note)h+='<div class="tt-n">'+esc(d.note)+'</div>';
+  tip.innerHTML=h; tip.classList.add('on');
+});
+document.addEventListener('mouseout',function(e){ if(e.target.closest('[data-tip]')) tip.classList.remove('on'); });
+document.addEventListener('mousemove',function(e){
+  if(!tip.classList.contains('on'))return;
+  var x=e.clientX+15,y=e.clientY+15;
+  if(x+tip.offsetWidth>innerWidth-10) x=e.clientX-tip.offsetWidth-15;
+  if(y+tip.offsetHeight>innerHeight-10) y=e.clientY-tip.offsetHeight-15;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+});
+
+render();
+})();
+</script>

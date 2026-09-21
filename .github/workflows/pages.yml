@@ -1,0 +1,106 @@
+name: build y publicar dashboard
+
+# Se dispara en cada push a main y a mano desde la pestaña Actions.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Permisos minimos necesarios para publicar en Pages. Por defecto el token
+# tendria mas de los que hacen falta.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un solo deploy a la vez; no cancelamos uno en curso para no dejar el sitio
+# a medio publicar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias fijadas
+        run: pip install -r requirements.txt
+
+      # El CSV crudo viene versionado: no se descarga nada en el CI, asi que
+      # el build no depende de que un repo de terceros siga existiendo.
+      - name: Preparar los datos
+        run: python src/data_preparation.py
+
+      # Los tests corren ANTES de construir el sitio. Si los numeros no dan,
+      # el job se corta y no se publica nada.
+      - name: Tests
+        run: pytest -q
+
+      - name: Construir el dashboard
+        run: python src/build_dashboard.py
+
+      # Ultima red de seguridad antes de publicar: que el archivo exista, pese
+      # lo que tiene que pesar y traiga los 1.470 empleados adentro.
+      - name: Verificar el sitio generado
+        run: |
+          test -f _site/index.html || { echo "No se genero _site/index.html"; exit 1; }
+          bytes=$(stat -c%s _site/index.html)
+          echo "_site/index.html: $bytes bytes"
+          if [ "$bytes" -lt 100000 ]; then
+            echo "El sitio pesa $bytes bytes, menos del minimo de 100000."
+            exit 1
+          fi
+          python - <<'PY'
+          import json, pathlib, re, sys
+          html = pathlib.Path("_site/index.html").read_text(encoding="utf-8")
+          if "__DATA_PLACEHOLDER__" in html:
+              sys.exit("Quedo el marcador sin reemplazar en el sitio.")
+          m = re.search(r'<script id="rrhh-data" type="application/json">(.*?)</script>', html, re.S)
+          if not m:
+              sys.exit("No se encontro el blob de datos en el sitio.")
+          datos = json.loads(m.group(1))
+          filas = len(datos["rows"])
+          bajas = sum(f[0] for f in datos["rows"])
+          print(f"blob: {filas} empleados, {bajas} bajas")
+          if filas != 1470:
+              sys.exit(f"El sitio trae {filas} empleados, se esperan 1470.")
+          if bajas != 237:
+              sys.exit(f"El sitio trae {bajas} bajas, se esperan 237.")
+          PY
+
+      # El dashboard versionado tiene que coincidir con lo que produce el codigo.
+      # Si alguien edita el HTML a mano en vez de la plantilla, esto lo caza.
+      - name: El entregable versionado esta al dia
+        run: |
+          if ! git diff --quiet -- dashboards/rrhh_dashboard.html; then
+            echo "dashboards/rrhh_dashboard.html no coincide con lo que genera el build."
+            echo "Corre 'python src/build_dashboard.py' y commitea el resultado."
+            git diff --stat -- dashboards/rrhh_dashboard.html
+            exit 1
+          fi
+          echo "El entregable versionado coincide con el build."
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    # Solo publica desde main: un pull request corre los tests pero no despliega.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

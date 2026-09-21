@@ -1,0 +1,23 @@
+# Finales de linea deterministas. Sin esto, el mismo commit produce archivos
+# distintos en Windows y en el CI de Linux, y dos cosas se rompen:
+#   1. el sha256 del CSV crudo que verifica tests/test_pipeline.py
+#   2. la comparacion entre el dashboard construido y el versionado
+
+# El CSV crudo viene con CRLF desde IBM. Se trata como binario para que git no
+# lo toque jamas: su sha256 esta fijado en src/paths.py y debe coincidir byte a
+# byte en cualquier sistema operativo.
+data/raw/*.csv -text
+
+# Todo lo demas se normaliza a LF, que es lo que escribe src/build_dashboard.py.
+*.py    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.md    text eol=lf
+*.sql   text eol=lf
+*.yml   text eol=lf
+*.txt   text eol=lf
+*.ipynb text eol=lf
+
+# Binarios: sin conversion ni diff de texto.
+*.png   binary
+*.pbix  binary
