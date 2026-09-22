@@ -8,7 +8,7 @@ Análisis completo de los factores que explican la rotación de personal en una
 plantilla de 1.470 empleados, siguiendo la metodología **CRISP-DM**, con un
 dashboard ejecutivo interactivo como entregable final.
 
-### 📊 [Ver el dashboard en vivo](https://joellwh.github.io/rrhh-attrition-analysis/)
+###  [Ver el dashboard en vivo](https://joellwh.github.io/rrhh-attrition-analysis/)
 
 La insignia de arriba no es decorativa: en cada push, GitHub Actions instala las
 dependencias fijadas, corre los tests, reconstruye el dashboard desde los datos
