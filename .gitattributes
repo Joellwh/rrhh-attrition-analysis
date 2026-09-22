@@ -21,3 +21,15 @@ data/raw/*.csv -text
 # Binarios: sin conversion ni diff de texto.
 *.png   binary
 *.pbix  binary
+
+# --- Estadisticas de lenguaje (GitHub Linguist) ---
+
+# El dashboard NO esta escrito a mano: lo genera src/build_dashboard.py a partir
+# de assets/dashboard_template.html y los datos. Marcarlo como generado lo saca
+# de las estadisticas de lenguaje y lo colapsa en los diffs. Sin esto, 156 KB de
+# HTML generado tapan el codigo Python y el repo parece un proyecto web.
+dashboards/rrhh_dashboard.html linguist-generated=true
+
+# Las consultas SQL son parte central del analisis, no un anexo: que cuenten.
+*.sql linguist-detectable=true
+sql/queries.sql linguist-language=SQL
