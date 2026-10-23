@@ -159,14 +159,16 @@ rrhh-attrition-analysis/
 
 ## El dashboard
 
-Un solo archivo HTML de 152 KB, sin frameworks ni dependencias externas. Los
+Un solo archivo HTML de 162 KB, sin frameworks ni dependencias externas. Los
 1.470 empleados viajan embebidos como JSON y los filtros recalculan en el
 navegador, así que responde al instante y funciona sin conexión.
 
 - **Cinco vistas**: Panorama, Compensación y carga, Clima interno, Trayectoria y Detalle
 - **Filtros combinables** por departamento, rol, viajes, estado civil, género, formación y horas extra
+- **Cabecera en grilla bento**: tarjetas de distinto tamaño con la tasa, las cifras clave, la zona de riesgo y accesos a las otras vistas
 - **Matriz de plantilla**: un cuadrado por empleado, que se achica al filtrar para que se vea cuándo la muestra deja de ser confiable
-- **Avisos de muestra chica** cuando un corte queda por debajo del umbral
+- **Zona de riesgo dinámica**: señala el rol con más rotación de la selección, o avisa cuando la muestra es chica
+- **Animación con propósito**: las cifras cuentan hasta el valor nuevo al filtrar, para que el cambio se vea; respeta la preferencia de movimiento reducido del sistema
 - Tema claro y oscuro, y funciona en pantalla de teléfono
 
 ---

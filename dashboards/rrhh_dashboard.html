@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Radar de Rotación</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,45 +164,92 @@ button{font:inherit; color:inherit; cursor:pointer;}
 /* ============ LAYOUT ============ */
 main{max-width:1360px; margin:0 auto; padding:20px 24px 72px;}
 
-/* ---- HERO: la plantilla como personas contables ---- */
-.hero{
-  background:var(--surface); border:1px solid var(--line); border-radius:14px;
-  box-shadow:var(--shadow); padding:22px 24px; margin-bottom:14px;
-  display:grid; grid-template-columns:1fr 258px; gap:28px; align-items:stretch;
+/* ---- BENTO: cabecera de todas las pestañas ----
+   Tarjetas de distinto tamaño: la grande muestra a la plantilla como personas
+   contables; alrededor, las cifras; abajo, la zona de riesgo y la navegación.
+   Animación con propósito: los números cuentan hasta el valor nuevo para que
+   el cambio de un filtro se VEA, y el único latido es el de la zona de riesgo
+   (si todo parpadea, nada llama la atención). */
+.bento{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:minmax(158px,auto); gap:14px; margin-bottom:16px;}
+.tile{
+  background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow);
+  padding:20px 22px; min-width:0; position:relative; overflow:hidden; display:flex; flex-direction:column;
+  transition:transform .25s cubic-bezier(.22,.8,.3,1), box-shadow .25s, border-color .2s;
+  animation:rise .55s cubic-bezier(.22,.8,.3,1) both; animation-delay:calc(var(--d,0) * 70ms);
 }
-.matrix-side{min-width:0; display:flex; flex-direction:column;}
-.matrix-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:12px; flex-wrap:wrap;}
+.tile:hover{transform:translateY(-3px); box-shadow:var(--sh-lift);}
+@keyframes rise{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+.t-hero{grid-column:span 2; grid-row:span 2; padding:24px 26px;}
+.t-wide{grid-column:span 2;}
+
+.hero-top{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+/* teal = algo que tocaste: el punto late solo mientras hay un filtro aplicado */
+.badge{display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:500; padding:4px 12px 4px 10px; border-radius:999px; background:var(--surface-2); color:var(--ink-soft); border:1px solid var(--line);}
+.badge .dot{width:8px; height:8px; border-radius:50%; background:var(--calm);}
+.badge.on{background:var(--teal-soft); color:var(--teal-ink); border-color:transparent;}
+.badge.on .dot{background:var(--teal); animation:beat 1.6s ease-in-out infinite;}
+@keyframes beat{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--teal) 55%,transparent);} 60%{box-shadow:0 0 0 7px transparent;}}
+.hero-rate{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-top:16px;}
+.hero-rate .v{font-family:var(--font-display); font-weight:600; font-size:4.25rem; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+.hero-rate.over .v{color:var(--risk-ink);}
+.hero-lab{font-size:14px; color:var(--ink-soft); margin-top:8px;}
+.delta{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px; font-variant-numeric:tabular-nums; animation:pop .35s cubic-bezier(.3,1.6,.5,1) both;}
+.delta:empty{display:none;}
+.delta.up{background:var(--risk-soft); color:var(--risk-ink);}
+.delta.down{background:var(--teal-soft); color:var(--teal-ink);}
+@keyframes pop{from{opacity:0; transform:scale(.7);} to{opacity:1; transform:none;}}
+.matrix-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin:20px 0 10px; flex-wrap:wrap;}
 .matrix-head .t{font-size:13px; color:var(--ink-soft);}
 .matrix-head .t b{color:var(--ink); font-weight:600;}
 .mkey{display:flex; gap:14px; flex-wrap:wrap;}
 .mkey span{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);}
 .mkey i{width:9px; height:9px; border-radius:2px; display:inline-block;}
-.matrix{display:grid; grid-template-columns:repeat(auto-fill,7px); gap:3px; align-content:start; animation:settle .3s ease;}
-.matrix i{width:7px; height:7px; border-radius:2px; display:block; background:var(--dot-stay);}
+/* la cuadrícula entra como una ola: cada cuadrado trae su índice en --i */
+.matrix{display:grid; grid-template-columns:repeat(auto-fill,7px); gap:3px; align-content:start;}
+.matrix i{width:7px; height:7px; border-radius:2px; display:block; background:var(--dot-stay); animation:dotin .4s ease both; animation-delay:calc(var(--i,0) * .35ms);}
 .matrix i.leave{background:var(--risk);}
-@keyframes settle{from{opacity:.25;} to{opacity:1;}}
-.matrix-foot{margin-top:12px; font-size:12px; color:var(--ink-faint); line-height:1.45;}
+@keyframes dotin{from{opacity:0; transform:scale(.3);} to{opacity:1; transform:none;}}
+.matrix-foot{margin-top:auto; padding-top:14px; font-size:12px; color:var(--ink-faint); line-height:1.45;}
 
-.hero-figs{border-left:1px solid var(--line-soft); padding-left:26px; display:flex; flex-direction:column; justify-content:center; min-width:0;}
-.hero-rate{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
-.hero-rate .v{font-family:var(--font-display); font-weight:600; font-size:3rem; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
-.hero-rate.over .v{color:var(--risk-ink);}
-.hero-lab{font-size:13px; color:var(--ink-soft); margin-top:8px;}
-.delta{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px; font-variant-numeric:tabular-nums;}
-.delta.up{background:var(--risk-soft); color:var(--risk-ink);}
-.delta.down{background:var(--teal-soft); color:var(--teal-ink);}
-.substats{display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; margin-top:20px; padding-top:16px; border-top:1px solid var(--line-soft);}
-.substat .n{font-family:var(--font-display); font-weight:600; font-size:1.25rem; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
-.substat .n.risk{color:var(--risk-ink);}
-.substat .l{font-size:12px; color:var(--ink-faint); margin-top:2px;}
+.stat .n{font-family:var(--font-display); font-weight:600; font-size:2.4rem; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:auto;}
+.stat .n.risk{color:var(--risk-ink);}
+.stat .l{font-size:13px; color:var(--ink-soft); margin-top:6px;}
+.split{display:flex; height:6px; border-radius:6px; overflow:hidden; background:var(--dot-stay); margin-top:14px;}
+.split b{display:block; background:var(--risk); transition:width .6s cubic-bezier(.22,.8,.3,1);}
+.cmp{display:grid; grid-template-columns:auto 1fr auto; gap:6px 10px; align-items:center; margin-top:14px; font-size:12px; color:var(--ink-soft);}
+.cmp[hidden]{display:none;}
+.cmp .tr{height:6px; border-radius:6px; background:var(--well); overflow:hidden;}
+.cmp .tr b{display:block; height:100%; border-radius:6px; transition:width .6s cubic-bezier(.22,.8,.3,1);}
+.cmp .v{font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink);}
 
-/* ---- alerta ---- */
-.alertstrip{display:flex; align-items:flex-start; gap:11px; border-radius:10px; padding:12px 16px; font-size:14px; margin-bottom:16px; border:1px solid transparent; line-height:1.45;}
-.alertstrip .icon{flex:none; width:18px; height:18px; margin-top:1px;}
-.alertstrip.tone-risk{background:var(--risk-soft); border-color:var(--risk); color:var(--ink);}
-.alertstrip.tone-warn{background:var(--warn-soft); border-color:var(--warn); color:var(--ink);}
-.alertstrip.tone-ok{background:var(--teal-soft); border-color:var(--teal); color:var(--ink);}
-.alertstrip b{font-weight:600;}
+/* zona de riesgo: reemplaza a la franja de alertas, con su misma lógica */
+.t-risk{border-color:transparent;}
+.t-risk.tone-risk{background:var(--risk-soft);}
+.t-risk.tone-warn{background:var(--warn-soft);}
+.t-risk.tone-ok{background:var(--surface-2); border-color:var(--line);}
+.t-risk .micro{color:var(--risk-ink);}
+.t-risk.tone-warn .micro{color:var(--warn-ink);}
+.t-risk.tone-ok .micro{color:var(--ink-faint);}
+.ping{position:absolute; top:22px; right:22px; width:12px; height:12px; display:none;}
+.tone-risk .ping{display:block;}
+.ping span{position:absolute; inset:0; border-radius:50%; background:var(--risk);}
+.ping span:first-child{animation:ping 1.5s cubic-bezier(0,0,.2,1) infinite; opacity:.7;}
+@keyframes ping{75%,100%{transform:scale(2.6); opacity:0;}}
+.risk-main{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-top:auto; padding-right:20px;}
+.risk-main h3{font-size:1.5rem;}
+.risk-main .n{font-family:var(--font-display); font-weight:600; font-size:2.25rem; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; color:var(--risk-ink);}
+.tone-warn .risk-main .n{color:var(--warn-ink);}
+.tone-ok .risk-main .n{color:var(--ink);}
+.risk-sub{font-size:13px; color:var(--ink-soft); margin-top:8px; line-height:1.45;}
+.risk-sub b{color:var(--ink); font-weight:600;}
+
+/* navegación: teal porque se puede tocar */
+.t-nav{cursor:pointer; text-align:left; font:inherit; color:inherit;}
+.t-nav .arrow{position:absolute; top:18px; right:18px; width:38px; height:38px; border-radius:50%; display:grid; place-items:center; background:var(--teal-soft); color:var(--teal-ink); font-size:18px; transition:transform .3s cubic-bezier(.3,1.4,.5,1), background .2s, color .2s;}
+.t-nav:hover .arrow, .t-nav:focus-visible .arrow{transform:rotate(45deg); background:var(--teal); color:var(--on-teal);}
+.t-nav:hover{border-color:var(--teal);}
+.t-nav h4{font-size:1.25rem; margin-top:auto; padding-right:44px;}
+.t-nav p{margin:6px 0 0; font-size:13px; color:var(--ink-faint);}
 
 /* ---- cards ---- */
 .grid{display:grid; gap:14px; grid-template-columns:repeat(12,1fr); align-items:start;}
@@ -307,22 +358,19 @@ table.dt .rate-cell .n{font-family:var(--font-display); font-weight:600; min-wid
 code{font-family:var(--font-code); font-size:12px; background:var(--surface-2); border:1px solid var(--line-soft); padding:1px 5px; border-radius:4px;}
 
 @media (max-width:1080px){
-  /* al apilarse, la cifra va primero: es la lectura de 5 segundos */
-  .hero{grid-template-columns:1fr; gap:18px;}
-  .hero-figs{order:-1; border-left:none; padding-left:0;}
-  .matrix-side{border-top:1px solid var(--line-soft); padding-top:18px;}
-  .substats{grid-template-columns:repeat(4,auto); justify-content:start; gap:14px 28px;}
+  .bento{grid-template-columns:repeat(2,minmax(0,1fr));}
   .c4,.c5,.c6,.c7,.c8{grid-column:span 12;}
 }
 @media (max-width:560px){
-  .substats{grid-template-columns:1fr 1fr;}
+  .bento{grid-template-columns:minmax(0,1fr);}
+  .t-hero, .t-wide{grid-column:auto; grid-row:auto;}
 }
 @media (max-width:720px){
   main{padding:16px 14px 56px;}
   .cmd-row{padding:9px 14px; gap:8px 12px;}
   .brand h1{font-size:16px;}
   .tabbar .cmd-row{padding-top:0; padding-bottom:0;}
-  .hero-rate .v{font-size:2.5rem;}
+  .hero-rate .v{font-size:3.2rem;}
   .hbar{grid-template-columns:104px 1fr auto;}
   .vbars{gap:6px;}
 }
@@ -368,8 +416,14 @@ code{font-family:var(--font-code); font-size:12px; background:var(--surface-2); 
 </div>
 
 <main>
-  <section class="hero">
-    <div class="matrix-side">
+  <section class="bento" aria-label="Resumen de la selección">
+    <div class="tile t-hero" style="--d:0">
+      <div class="hero-top">
+        <span class="micro">Rotación</span>
+        <span class="badge" id="badge"><span class="dot"></span><span id="badgeTxt">Plantilla completa</span></span>
+      </div>
+      <div class="hero-rate" id="heroRate"><span class="v" id="rateV"></span><span class="delta" id="rateDelta"></span></div>
+      <div class="hero-lab" id="heroLab"></div>
       <div class="matrix-head">
         <div class="t" id="mtitle"></div>
         <div class="mkey">
@@ -380,14 +434,42 @@ code{font-family:var(--font-code); font-size:12px; background:var(--surface-2); 
       <div class="matrix" id="matrix" role="img" aria-label="Cada cuadrado es un empleado de la selección actual"></div>
       <div class="matrix-foot">Cada cuadrado es una persona. El bloque se achica cuando filtrás: si queda chico, la tasa de arriba deja de ser confiable.</div>
     </div>
-    <div class="hero-figs">
-      <div class="hero-rate" id="heroRate"></div>
-      <div class="hero-lab" id="heroLab"></div>
-      <div class="substats" id="substats"></div>
-    </div>
-  </section>
 
-  <div id="alerts"></div>
+    <div class="tile stat" style="--d:1">
+      <span class="micro">Se fueron</span>
+      <div class="n risk" id="kLeft"></div>
+      <div class="l" id="kLeftLab"></div>
+      <div class="split" aria-hidden="true"><b id="kLeftBar"></b></div>
+    </div>
+    <div class="tile stat" style="--d:2">
+      <span class="micro">Permanecen</span>
+      <div class="n" id="kStay"></div>
+      <div class="l">siguen en la plantilla</div>
+    </div>
+    <div class="tile stat" style="--d:3">
+      <span class="micro">Ingreso promedio</span>
+      <div class="n" id="kInc"></div>
+      <div class="l">mensual, en la selección</div>
+    </div>
+    <div class="tile stat" style="--d:4">
+      <span class="micro">Brecha salarial</span>
+      <div class="n" id="kGap"></div>
+      <div class="l" id="kGapLab"></div>
+      <div class="cmp" id="gapCmp" aria-hidden="true">
+        <span>Permanecen</span><span class="tr"><b id="gStayBar" style="background:var(--calm)"></b></span><span class="v" id="gStay"></span>
+        <span>Se fueron</span><span class="tr"><b id="gLeftBar" style="background:var(--risk)"></b></span><span class="v" id="gLeft"></span>
+      </div>
+    </div>
+
+    <div class="tile t-wide t-risk" id="riskTile" style="--d:5" role="status">
+      <span class="ping" aria-hidden="true"><span></span><span></span></span>
+      <span class="micro" id="riskKicker"></span>
+      <div class="risk-main"><h3 id="riskHead"></h3><span class="n" id="riskRate"></span></div>
+      <div class="risk-sub" id="riskSub"></div>
+    </div>
+    <button class="tile t-nav" id="nav1" style="--d:6"></button>
+    <button class="tile t-nav" id="nav2" style="--d:7"></button>
+  </section>
 
   <div class="panel on" id="panel-panorama"></div>
   <div class="panel" id="panel-carga"></div>
@@ -578,53 +660,141 @@ function card(o){
     +'</div>';
 }
 
-/* ================= HERO ================= */
+/* ================= BENTO ================= */
+var MOTION=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+/* Cuenta animada: el número viaja desde el valor anterior al nuevo, así el
+   cambio de un filtro se ve en vez de solo reemplazarse. El setTimeout es el
+   respaldo para cuando el navegador pausa requestAnimationFrame (pestaña en
+   segundo plano): el número siempre termina en el valor exacto. */
+function tween(el,to,fmt){
+  var from=parseFloat(el.dataset.v); el.dataset.v=to;
+  cancelAnimationFrame(el._raf); clearTimeout(el._end);
+  if(!MOTION||isNaN(from)||from===to){el.textContent=fmt(to); return;}
+  var t0=performance.now(), dur=650;
+  el._end=setTimeout(function(){cancelAnimationFrame(el._raf); el.textContent=fmt(to);},dur+60);
+  (function step(t){
+    var p=Math.min(1,Math.max(0,(t-t0)/dur)), e=1-Math.pow(1-p,3);
+    el.textContent=fmt(from+(to-from)*e);
+    if(p<1) el._raf=requestAnimationFrame(step);
+  })(t0);
+}
+function setText(el,txt){cancelAnimationFrame(el._raf); clearTimeout(el._end); el.dataset.v=''; el.textContent=txt;}
+
+var lastMatrix='';
 function renderHero(rs){
   var n=rs.length,k=leavers(rs),r=n?k/n:0,any=isFiltered();
-  var mh=''; for(var i=0;i<k;i++) mh+='<i class="leave"></i>';
-  for(var j=0;j<n-k;j++) mh+='<i></i>';
-  var mx=document.getElementById('matrix');
-  mx.innerHTML=mh; mx.style.animation='none'; void mx.offsetWidth; mx.style.animation='';
-  mx.setAttribute('aria-label',num(n)+' empleados en la selección, '+num(k)+' se fueron');
 
+  // La ola se repite solo si cambió la selección, no al cambiar de pestaña.
+  if(n+'/'+k!==lastMatrix){
+    lastMatrix=n+'/'+k;
+    var mh='';
+    for(var i=0;i<n;i++) mh+='<i'+(i<k?' class="leave"':'')+(MOTION?' style="--i:'+i+'"':'')+'></i>';
+    var mx=document.getElementById('matrix');
+    mx.innerHTML=mh;
+    mx.setAttribute('aria-label',num(n)+' empleados en la selección, '+num(k)+' se fueron');
+  }
   document.getElementById('mtitle').innerHTML= any
     ? '<b>'+num(n)+'</b> de 1.470 empleados en la selección'
     : '<b>1.470</b> empleados · plantilla completa';
 
-  var d=r-BASE, over=r>BASE;
-  document.getElementById('heroRate').className='hero-rate'+(over?' over':'');
-  document.getElementById('heroRate').innerHTML='<span class="v">'+pct(r)+'</span>'
-    +(any&&Math.abs(d)>=0.005?'<span class="delta '+(d>0?'up':'down')+'">'+(d>0?'▲':'▼')+' '+dec(Math.abs(d*100))+' pts</span>':'');
+  document.getElementById('badge').classList.toggle('on',any);
+  document.getElementById('badgeTxt').textContent= any?'Filtro activo':'Plantilla completa';
+
+  var d=r-BASE;
+  document.getElementById('heroRate').className='hero-rate'+(r>BASE?' over':'');
+  tween(document.getElementById('rateV'),r,function(x){return pct(x);});
+  var dl=document.getElementById('rateDelta'),
+      dt=(any&&n&&Math.abs(d)>=0.005)?(d>0?'▲':'▼')+' '+dec(Math.abs(d*100))+' pts':'';
+  if(dl.textContent!==dt){dl.className='delta '+(d>0?'up':'down'); dl.textContent=dt;}
   document.getElementById('heroLab').textContent= any
     ? 'rotación en la selección · la compañía está en 16,1%'
     : 'rotación general de la compañía';
 
-  var gl=avgIf(rs,'MonthlyIncome',1), gs=avgIf(rs,'MonthlyIncome',0);
-  document.getElementById('substats').innerHTML=
-     '<div class="substat"><div class="n risk">'+num(k)+'</div><div class="l">se fueron</div></div>'
-    +'<div class="substat"><div class="n">'+num(n-k)+'</div><div class="l">permanecen</div></div>'
-    +'<div class="substat"><div class="n">'+(n?money(avg(rs,'MonthlyIncome')):'—')+'</div><div class="l">ingreso promedio</div></div>'
-    +(gl&&gs?'<div class="substat"><div class="n">'+money(gs-gl)+'</div><div class="l">brecha salarial</div></div>':'');
+  tween(document.getElementById('kLeft'),k,function(x){return num(Math.round(x));});
+  document.getElementById('kLeftLab').textContent='de '+num(n)+' dejaron la empresa';
+  document.getElementById('kLeftBar').style.width=(r*100)+'%';
+  tween(document.getElementById('kStay'),n-k,function(x){return num(Math.round(x));});
+  if(n) tween(document.getElementById('kInc'),avg(rs,'MonthlyIncome'),money);
+  else setText(document.getElementById('kInc'),'—');
+
+  // Brecha = ingreso de quienes permanecen menos el de quienes se fueron.
+  // Puede ser negativa (p. ej. Ejecutivos de Ventas): se muestra en valor
+  // absoluto y el rótulo dice hacia qué lado va.
+  var gl=avgIf(rs,'MonthlyIncome',1), gs=avgIf(rs,'MonthlyIncome',0), gap=gs-gl;
+  var kg=document.getElementById('kGap'), cmp=document.getElementById('gapCmp');
+  if(gl&&gs){
+    tween(kg,Math.abs(gap),money);
+    document.getElementById('kGapLab').textContent= gap>=0?'menos ganan quienes se fueron':'más ganan quienes se fueron';
+    var top=Math.max(gs,gl);
+    document.getElementById('gStay').textContent=money(gs);
+    document.getElementById('gLeft').textContent=money(gl);
+    document.getElementById('gStayBar').style.width=(gs/top*100)+'%';
+    document.getElementById('gLeftBar').style.width=(gl/top*100)+'%';
+    cmp.hidden=false;
+  }else{
+    setText(kg,'—');
+    document.getElementById('kGapLab').textContent='hace falta gente que se fue y que se quedó para comparar';
+    cmp.hidden=true;
+  }
 }
 
-function renderAlerts(rs){
-  var el=document.getElementById('alerts'),n=rs.length;
-  if(!n){el.innerHTML='';return;}
-  var r=rate(rs),out=[];
-  var warn='<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 6.5v4.2M10 13.8v.1M10 2.5 1.8 16.5h16.4L10 2.5Z" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var ok='<svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="m6.8 10.2 2.2 2.2 4.4-4.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  if(n<MIN_N){
-    out.push('<div class="alertstrip tone-warn">'+warn+'<div><b>Muestra chica: '+n+' empleados.</b> Un solo caso mueve la tasa varios puntos. Ampliá los filtros antes de sacar conclusiones.</div></div>');
+/* Zona de riesgo: la misma lógica que tenía la franja de alertas, ahora como
+   tarjeta. El ping solo aparece en tono "risk". */
+function renderRisk(rs){
+  var n=rs.length, r=rate(rs), tone, kick, head, fig=null, sub;
+  if(!n){
+    tone='ok'; kick='Sin datos'; head='Ningún empleado coincide';
+    sub='La combinación de filtros dejó la selección vacía. Quitá alguno para volver a ver datos.';
+  }else if(n<MIN_N){
+    tone='warn'; kick='Muestra chica'; head=num(n)+' empleados';
+    sub='Un solo caso mueve la tasa varios puntos. Ampliá los filtros antes de sacar conclusiones.';
   }else{
     var roles=groupBy(rs,'JobRole').filter(function(g){return g.n>=MIN_N;}).sort(function(a,b){return b.rate-a.rate;});
     var top=roles[0];
     if(top&&top.rate>=BASE*1.4){
-      out.push('<div class="alertstrip tone-risk">'+warn+'<div><b>Zona de riesgo: '+esc(top.label)+'.</b> '+pct(top.rate)+' de rotación ('+top.k+' de '+top.n+' empleados), '+dec(top.rate/BASE)+'× la referencia de la compañía.</div></div>');
+      tone='risk'; kick='Zona de riesgo'; head=top.label; fig=top.rate;
+      sub='<b>'+top.k+' de '+top.n+'</b> empleados se fueron · '+dec(top.rate/BASE)+'× la referencia de la compañía';
     }else if(r<BASE*0.75){
-      out.push('<div class="alertstrip tone-ok">'+ok+'<div><b>Grupo estable.</b> La rotación de esta selección ('+pct(r)+') está bastante por debajo de la referencia. No hay zonas críticas.</div></div>');
+      tone='ok'; kick='Grupo estable'; head='Sin zonas críticas';
+      sub='La rotación de esta selección ('+pct(r)+') está bastante por debajo de la referencia de la compañía.';
+    }else if(top){
+      tone=top.rate>BASE?'warn':'ok';
+      kick=top.rate>BASE?'Para vigilar · rol con más rotación':'Rol con más rotación · bajo la referencia';
+      head=top.label; fig=top.rate;
+      sub='<b>'+top.k+' de '+top.n+'</b> empleados se fueron · '
+        +(top.rate>BASE?dec(top.rate/BASE)+'× la referencia de la compañía':'por debajo del 16,1% de la compañía');
+    }else{
+      tone='ok'; kick='Sin roles comparables'; head='Ningún rol llega a '+MIN_N+' personas';
+      sub='Con grupos tan chicos la tasa por rol no es confiable.';
     }
   }
-  el.innerHTML=out.join('');
+  document.getElementById('riskTile').className='tile t-wide t-risk tone-'+tone;
+  document.getElementById('riskKicker').textContent=kick;
+  document.getElementById('riskHead').textContent=head;
+  var rr=document.getElementById('riskRate');
+  if(fig===null) setText(rr,''); else tween(rr,fig,function(x){return pct(x);});
+  document.getElementById('riskSub').innerHTML=sub;
+}
+
+/* Navegación: las dos pestañas que siguen a la actual. */
+var TABS=[
+  {id:'panorama',t:'Panorama',d:'Rotación por rol, área, viajes y perfil'},
+  {id:'carga',t:'Compensación y carga',d:'Ingreso, horas extra y distancia al trabajo'},
+  {id:'clima',t:'Clima interno',d:'Satisfacción, ambiente y equilibrio de vida'},
+  {id:'carrera',t:'Trayectoria',d:'Antigüedad, promociones y jefaturas'},
+  {id:'detalle',t:'Detalle',d:'Tabla completa por la dimensión que elijas'}
+];
+function renderNav(){
+  var at=0; TABS.forEach(function(t,i){if(t.id===state.tab)at=i;});
+  ['nav1','nav2'].forEach(function(id,j){
+    var t=TABS[(at+1+j)%TABS.length], b=document.getElementById(id);
+    if(b.dataset.goto===t.id) return;
+    b.dataset.goto=t.id;
+    b.setAttribute('aria-label','Ir a la pestaña '+t.t);
+    b.innerHTML='<span class="arrow" aria-hidden="true">↗</span><span class="micro">Ir a</span>'
+      +'<h4>'+esc(t.t)+'</h4><p>'+esc(t.d)+'</p>';
+  });
 }
 
 /* ================= PANELES ================= */
@@ -790,7 +960,7 @@ function isFiltered(){return Object.keys(state.f).some(function(k){return state.
 
 function render(){
   var rs=filtered();
-  renderHero(rs); renderAlerts(rs);
+  renderHero(rs); renderRisk(rs); renderNav();
   var host=document.getElementById('panel-'+state.tab);
   host.innerHTML= rs.length ? PANELS[state.tab](rs)
     : '<div class="empty"><div class="big">Ningún empleado coincide</div><div>La combinación de filtros dejó la selección vacía. Quitá alguno para volver a ver datos.</div></div>';
@@ -832,6 +1002,15 @@ document.querySelector('.tabbar').addEventListener('click',function(e){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('on');});
   document.getElementById('panel-'+state.tab).classList.add('on');
   render();
+});
+document.querySelectorAll('.t-nav').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelector('.tabbar button[data-tab="'+b.dataset.goto+'"]').click();
+    // la barra de filtros es sticky: se descuenta su alto para que no tape el panel
+    var y=document.getElementById('panel-'+state.tab).getBoundingClientRect().top+scrollY
+          -document.querySelector('.cmdbar').offsetHeight-14;
+    window.scrollTo({top:y,behavior:MOTION?'smooth':'auto'});
+  });
 });
 document.addEventListener('click',function(e){
   var th=e.target.closest('th[data-sort]'); if(!th)return;
